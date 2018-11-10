@@ -12,9 +12,13 @@ import network
 import config
 
 # consts
-EPHOCS = 2
+EPHOCS = 1000
+TRAIN = False
+runName = "crossEntropyOnly" 
+modelSaveDir = os.path.join(os.getcwd(), 'output', 'trainedModels', runName)
+modelSavePath = os.path.join(modelSaveDir, 'model.ckpt')
 
-
+# SAVE_MODEL_DIR = os.path.join(os.getcwd(), 'saved', MODEL + '.ckpt')
 # This function is defining the prob of going to an other point as the log prob of a gaussian.
 # ence each jump, given the previous jump, is give by the previous jump origin (expectation of the gaussian)
 # and a predifined sigma.
@@ -38,11 +42,11 @@ if __name__ == '__main__':
     entropy_value = tf.reduce_mean(entropy_value)
 
     # Reward; caculated but not being used for any training...
-    predict_label = tf.argmax(logits, 1)
-    reward = tf.cast(tf.equal(predict_label, labels_ph), tf.float32)
-    rewards = tf.expand_dims(reward, 1)
+    labels_prediction = tf.argmax(softmax, 1)
+    correct_predictions = tf.cast(tf.equal(labels_prediction, labels_ph), tf.float32)
+    rewards = tf.expand_dims(correct_predictions, 1)
     rewards = tf.tile(rewards, (1, config.num_glimpses)) 
-    reward = tf.reduce_mean(reward)
+    reward = tf.reduce_mean(rewards)
 
     # Reward; punish jumping...
     mu = tf.stack(retina.origin_coor_list)
@@ -63,51 +67,106 @@ if __name__ == '__main__':
     global_step = tf.get_variable('global_step', initializer=tf.constant(0), trainable=False)
     train_op = opt.apply_gradients(zip(grads, var_list), global_step=global_step)
     
-    runName = "test"
 
     saver = tf.train.Saver()
-    dataSaver = DataSaver('ephoch', 'iter', 'loss', 'reward', filename = './output/data/' + runName)
+    
+    if TRAIN:
 
-    # Train
-    with tf.Session() as sess:
-        # save gaph
-        # tf.summary.FileWriter('./temp/graph').add_graph(sess.graph)
-
-        mnist = Prepare_dataset(batch_size = config.batch_size)
-        sess.run(tf.global_variables_initializer())
-
-        timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
         
-        for j in range(1, EPHOCS):
-            for i in range(1, (mnist.train_size // config.batch_size)):
-                # images, labels = mnist.train.next_batch(config.batch_size)
-                images, labels = mnist()
-                images = np.tile(images, [config.M, 1])
-                labels = np.tile(labels, [config.M])
+        dataSaver = DataSaver('ephoch', 'iter', 'loss', 'reward', filename = './output/data/' + runName)
 
-                _loss_value, _reward_value, _ = sess.run([loss, reward, train_op], feed_dict = {
+        # Train
+        with tf.Session() as sess:
+            # save gaph
+            # tf.summary.FileWriter('./temp/graph').add_graph(sess.graph)
+
+
+            mnist = Prepare_dataset(batch_size = config.batch_size)
+            tf.global_variables_initializer().run()
+
+            print('-----------------', os.path.isfile(modelSavePath+".index"))
+            if os.path.isfile(modelSavePath+".index"):
+                saver.restore(sess, modelSavePath)
+
+            timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
+            
+            for j in range(1, EPHOCS):
+                for i in range(1, (mnist.train_size // config.batch_size)):
+                    # images, labels = mnist.train.next_batch(config.batch_size)
+                    images, labels = mnist()
+                    images = np.tile(images, [config.M, 1])
+                    labels = np.tile(labels, [config.M])
+
+                    _loss_value, _reward_value, _ = sess.run([loss, reward, train_op], feed_dict = {
+                        images_ph: images,
+                        labels_ph: labels
+                    })
+                    # print(i, i % 10)
+                    if i % (100) == 0:
+                        dataSaver.add({
+                            'ephoch': j
+                            , 'iter': i
+                            , 'loss': _loss_value
+                            ,'reward': _reward_value
+                        })
+                        print(
+                            'ephoc: ', j,
+                            '\titer: ', i,
+                            '\tloss: ', _loss_value,
+                            '\treward: ', _reward_value,
+                            '\ttimeElapsed: ', timer.elapsed(step = (i + (j - 1) * (mnist.train_size // config.batch_size))),
+                            '\tremaining: ', timer.left()
+                        )
+
+            if not os.path.exists(modelSaveDir):
+                os.makedirs(modelSaveDir)
+    
+            saver.save(sess, modelSavePath)
+
+    else:
+        # --------------------------------------------------------------
+        # test loop
+        # --------------------------------------------------------------
+
+        dataSaver = DataSaver('n', 'softmax', 'label', filename = './output/data/' + runName +'Test2', divider=',')
+        
+        with tf.Session() as sess:
+            # save gaph
+            # tf.summary.FileWriter('./temp/graph').add_graph(sess.graph)
+
+            trainingBatchSize = 1
+            mnist = Prepare_dataset(batch_size = trainingBatchSize)
+            tf.global_variables_initializer().run()
+            saver.restore(sess, modelSavePath)
+
+            for i in range(1, (mnist.train_size // 1)):
+                images, labels = mnist()
+
+                _softmax = sess.run([softmax], feed_dict = {
                     images_ph: images,
                     labels_ph: labels
                 })
+
+                dataSaver.add({
+                        'n': i
+                        ,'softmax': _softmax[0][0]
+                        ,'label': labels[0]
+                })
                 # print(i, i % 10)
-                if i % (100) == 0:
-                    dataSaver.add({
-                        'ephoch': j
-                        , 'iter': i
-                        , 'loss': _loss_value
-                        ,'reward': _reward_value
-                    })
+                if i % (1000) == 0:
+                    # dataSaver.add({
+                    #     'n': i
+                    #     ,'prediction': _labels_prediction
+                    #     ,'label': labels
+                    # })
                     print(
-                        'ephoc: ', j,
-                        '\titer: ', i,
-                        '\tloss: ', _loss_value,
-                        # '\treward: ', _reward_value,
-                        '\ttimeElapsed: ', timer.elapsed(step = (i + (j - 1) * (mnist.train_size // config.batch_size))),
-                        '\tremaining: ', timer.left()
+                        '\n: ', i
+                        # , '\tloss: ', _labels_prediction
+                        # , '\treward: ', _reward_value
+                        , '\tsoftmax: ', _softmax
                     )
 
-        modelSaveDir = 'output/trainedModels/' + runName
-        if not os.path.exists(modelSaveDir):
-            os.makedirs(modelSaveDir)
- 
-        saver.save(sess, modelSaveDir)
+            if not os.path.exists(modelSaveDir):
+                os.makedirs(modelSaveDir)
+    
+            saver.save(sess, modelSavePath)

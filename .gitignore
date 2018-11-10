@@ -1,8 +1,12 @@
 __pycache__
 .**/__pycache__
+./data
+
+# output
 data
-output
 literature
-output\graph
-output\trainedModels
+output
+output
+output
 viewData.ipynb
+outputData*
