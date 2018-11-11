@@ -1,11 +1,16 @@
 import csv
 import numpy
+import os
 
 class DataSaver:
     def __init__(self, *titles, filename='outputData', divider =','):
         self.titles = titles
         self.divider = divider
         self.filename = filename + '.csv'
+
+        if not os.path.isfile(self.filename):
+            os.makedirs(os.path.dirname(self.filename))
+        
         with open(filename + '.csv', 'w') as file:
             file.write(self.divider.join(self.titles))
 

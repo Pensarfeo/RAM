@@ -12,11 +12,18 @@ import network
 import config
 
 # consts
-EPHOCS = 1000
-TRAIN = False
-runName = "crossEntropyOnly" 
-modelSaveDir = os.path.join(os.getcwd(), 'output', 'trainedModels', runName)
+EPHOCS = 0
+TRAIN = True
+runName = "feededGuess2LocationNet" 
+modelSaveDir = os.path.join(os.getcwd(), 'output', runName, 'trainedModels')
 modelSavePath = os.path.join(modelSaveDir, 'model.ckpt')
+trainingString = 'training' if (TRAIN==True) else 'testing'
+dataSavePath = os.path.join('output', runName, 'data', trainingString )
+graphSavePath = os.path.join('output', runName, 'graph', trainingString )
+
+print('graph location ======================================>')
+print(graphSavePath)
+print('<====================================== graph location ')
 
 # SAVE_MODEL_DIR = os.path.join(os.getcwd(), 'saved', MODEL + '.ckpt')
 # This function is defining the prob of going to an other point as the log prob of a gaussian.
@@ -36,57 +43,57 @@ if __name__ == '__main__':
     # Create network
     logits, retina = network.setUp(images_ph)
 
-    # Cross-entropy
-    softmax = tf.nn.softmax(logits)
-    entropy_value = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_ph)
-    entropy_value = tf.reduce_mean(entropy_value)
+    with tf.variable_scope('Losses'):
+        # Cross-entropy
+        softmax = tf.nn.softmax(logits)
+        entropy_value = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_ph)
+        entropy_value = tf.reduce_mean(entropy_value)
 
-    # Reward; caculated but not being used for any training...
-    labels_prediction = tf.argmax(softmax, 1)
-    correct_predictions = tf.cast(tf.equal(labels_prediction, labels_ph), tf.float32)
-    rewards = tf.expand_dims(correct_predictions, 1)
-    rewards = tf.tile(rewards, (1, config.num_glimpses)) 
-    reward = tf.reduce_mean(rewards)
+        # Reward; caculated but not being used for any training...
+        labels_prediction = tf.argmax(softmax, 1)
+        correct_predictions = tf.cast(tf.equal(labels_prediction, labels_ph), tf.float32)
+        rewards = tf.expand_dims(correct_predictions, 1)
+        rewards = tf.tile(rewards, (1, config.num_glimpses)) 
+        reward = tf.reduce_mean(rewards)
 
-    # Reward; punish jumping...
-    mu = tf.stack(retina.origin_coor_list)
-    sampled = tf.stack(retina.sample_coor_list)
-    gaussian = distributions.Normal(mu, config.loc_std)
-    _log = gaussian.log_prob(sampled)
-    _log = tf.reduce_sum(_log, 2)
-    _log = tf.transpose(_log)
-    _log_ratio = tf.reduce_mean(_log)
+        # Reward; punish jumping...
+        mu = tf.stack(retina.origin_coor_list)
+        sampled = tf.stack(retina.sample_coor_list)
+        gaussian = distributions.Normal(mu, config.loc_std)
+        _log = gaussian.log_prob(sampled)
+        _log = tf.reduce_sum(_log, 2)
+        _log = tf.transpose(_log)
+        _log_ratio = tf.reduce_mean(_log)
 
-    # Hybric loss
-    loss = entropy_value
-    var_list = tf.trainable_variables()
-    grads = tf.gradients(loss, var_list)
+        # Hybric loss
+        loss = entropy_value
+        var_list = tf.trainable_variables()
+        grads = tf.gradients(loss, var_list)
 
-    # Optimizer
-    opt = tf.train.AdamOptimizer(0.0001)
-    global_step = tf.get_variable('global_step', initializer=tf.constant(0), trainable=False)
-    train_op = opt.apply_gradients(zip(grads, var_list), global_step=global_step)
+    with tf.variable_scope('Optimizer'):
+        # Optimizer
+        opt = tf.train.AdamOptimizer(0.0001)
+        global_step = tf.get_variable('global_step', initializer=tf.constant(0), trainable=False)
+        train_op = opt.apply_gradients(zip(grads, var_list), global_step=global_step)
     
 
     saver = tf.train.Saver()
     
     if TRAIN:
-
         
-        dataSaver = DataSaver('ephoch', 'iter', 'loss', 'reward', filename = './output/data/' + runName)
+        dataSaver = DataSaver('ephoch', 'iter', 'loss', 'reward', filename = dataSavePath)
 
         # Train
         with tf.Session() as sess:
             # save gaph
-            # tf.summary.FileWriter('./temp/graph').add_graph(sess.graph)
+            tf.summary.FileWriter(graphSavePath).add_graph(sess.graph)
 
 
             mnist = Prepare_dataset(batch_size = config.batch_size)
             tf.global_variables_initializer().run()
 
-            print('-----------------', os.path.isfile(modelSavePath+".index"))
-            if os.path.isfile(modelSavePath+".index"):
-                saver.restore(sess, modelSavePath)
+            # if os.path.isfile(modelSavePath + ".index"):
+            #     saver.restore(sess, modelSavePath)
 
             timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
             
@@ -128,7 +135,7 @@ if __name__ == '__main__':
         # test loop
         # --------------------------------------------------------------
 
-        dataSaver = DataSaver('n', 'softmax', 'label', filename = './output/data/' + runName +'Test2', divider=',')
+        dataSaver = DataSaver('n', 'softmax', 'label', filename = dataSavePath, divider=',')
         
         with tf.Session() as sess:
             # save gaph
@@ -165,8 +172,3 @@ if __name__ == '__main__':
                         # , '\treward: ', _reward_value
                         , '\tsoftmax: ', _softmax
                     )
-
-            if not os.path.exists(modelSaveDir):
-                os.makedirs(modelSaveDir)
-    
-            saver.save(sess, modelSavePath)
