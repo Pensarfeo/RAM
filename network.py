@@ -26,7 +26,7 @@ class Retina():
         self.sample_coor_list.append(sample_coor)
         glimpse = self.glimps_network(sample_coor)
 
-        return glimpse
+        return [glimpse, action_net]
 
 def setUp(images_ph):    
     # Construct core rnn network
@@ -46,10 +46,10 @@ def setUp(images_ph):
                 init_lstm_state = lstm_cell.zero_state(tf.shape(images_ph)[0], tf.float32)
 
             state = init_lstm_state
+            outputs = []
 
             for i, inp in enumerate(input_glimps_tensor_list):
                 output, state = lstm_cell(inp, state)
-
 
                 with variable_scope.variable_scope("loop_function", reuse=None):    # original set as True
                     inp = retina.getNext(output, i)
