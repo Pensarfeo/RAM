@@ -9,6 +9,9 @@ class Retina(): #, _origin_coor_list, _sample_coor_list):
         self.location_network = LocationNetwork()
         self.glimps_network = GlimpsNetwork(images_ph)
 
+    def randomeLoc(self):
+        tf.random_uniform((tf.shape(images_ph)[0], 2), minval=-1.0, maxval=1.0)
+
     def getNext(self, output, i): 
         sample_coor, origin_coor = self.location_network(output)
         self.origin_coor_list.append(origin_coor)

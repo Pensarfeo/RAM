@@ -55,15 +55,15 @@ if __name__ == '__main__':
         rewards = tf.expand_dims(correct_predictions, 1)
         rewards = tf.tile(rewards, (1, config.num_glimpses)) 
         reward = tf.reduce_mean(rewards)
-
+        
         # Reward; punish jumping...
-        mu = tf.stack(retina.origin_coor_list)
-        sampled = tf.stack(retina.sample_coor_list)
-        gaussian = distributions.Normal(mu, config.loc_std)
-        _log = gaussian.log_prob(sampled)
-        _log = tf.reduce_sum(_log, 2)
-        _log = tf.transpose(_log)
-        _log_ratio = tf.reduce_mean(_log)
+        # mu = tf.stack(retina.origin_coor_list)
+        # sampled = tf.stack(retina.sample_coor_list)
+        # gaussian = distributions.Normal(mu, config.loc_std)
+        # _log = gaussian.log_prob(sampled)
+        # _log = tf.reduce_sum(_log, 2)
+        # _log = tf.transpose(_log)
+        # _log_ratio = tf.reduce_mean(_log)
 
         # Hybric loss
         loss = entropy_value
@@ -89,13 +89,13 @@ if __name__ == '__main__':
             tf.summary.FileWriter(graphSavePath).add_graph(sess.graph)
 
 
-            mnist = Prepare_dataset(batch_size = config.batch_size)
+            # mnist = Prepare_dataset(batch_size = config.batch_size)
             tf.global_variables_initializer().run()
 
             # if os.path.isfile(modelSavePath + ".index"):
             #     saver.restore(sess, modelSavePath)
 
-            timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
+            # timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
             
             for j in range(1, EPHOCS):
                 for i in range(1, (mnist.train_size // config.batch_size)):
