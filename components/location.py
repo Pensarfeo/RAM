@@ -4,7 +4,7 @@ import config
 
 class LocationNetwork(object):
     def __call__(self, state_tensor, guess):
-        with tf.variable_scope(tf.get_variable_scope()) as vs:
+        with tf.variable_scope('location', reuse = tf.AUTO_REUSE):
             # Network structure
             self.location_net = tl.layers.InputLayer(state_tensor)
             self.location_net = tl.layers.DenseLayer(self.location_net, n_units = config.loc_dim, name='location_net_fc1')

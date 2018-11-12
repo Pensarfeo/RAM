@@ -27,7 +27,7 @@ class Retina():
 
         return output
 
-    def getNext(self, currentState, i):
+    def getNext(self, currentState, i, glimpseScope = None):
         
         action_net = classifierNetwork(currentState)
         sample_coor, origin_coor = self.location_network(currentState, action_net.outputs)
@@ -48,18 +48,17 @@ def setUp(images_ph):
     input_glimps_tensor_list.append([0] * config.num_glimpses)
     inputs.append(retina.firstGlimpse())
 
-    with tf.variable_scope('coreNet'):
 
+    with tf.variable_scope('coreNetwork', reuse = tf.AUTO_REUSE):
         for i in range(0, 6):
             REUSE = True if i>0 else None
-            with variable_scope.variable_scope("rnn_decoder", reuse = REUSE):
-                
+
+            with tf.variable_scope('rnn'):
+
                 output, state = lstm_cell(inputs[-1], state)
 
                 glimpse, action_net = retina.getNext(output, i)
 
-                if i > 0:
-                    variable_scope.get_variable_scope().reuse_variables()
                 inputs.append(glimpse)
                 outputs.append(output)
 

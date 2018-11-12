@@ -6,6 +6,7 @@ import config
 class GlimpsNetwork(object):
     def __init__(self, location_ph):
         self.location_ph = location_ph
+        self.scope = None
 
     def getGlimpse(self, loc_tensor):
         with tf.variable_scope('getGlimpse'):
@@ -15,7 +16,8 @@ class GlimpsNetwork(object):
         return self.glimps_imgs
 
     def __call__(self, loc_tensor):
-        with tf.variable_scope('Glimpse'):
+        with tf.variable_scope(self.scope or 'Glimpse', reuse = tf.AUTO_REUSE) as scope:
+            self.scope = self.scope or scope
             self.retina_imgs = self.getGlimpse(loc_tensor)
 
             # Glimps network upper part

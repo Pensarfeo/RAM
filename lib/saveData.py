@@ -8,8 +8,9 @@ class DataSaver:
         self.divider = divider
         self.filename = filename + '.csv'
 
-        if not os.path.isfile(self.filename):
-            os.makedirs(os.path.dirname(self.filename))
+        self.dir = os.path.dirname(self.filename)
+        if not  os.path.isdir(self.dir):
+            os.makedirs(self.dir)
         
         with open(filename + '.csv', 'w') as file:
             file.write(self.divider.join(self.titles))
@@ -22,7 +23,7 @@ class DataSaver:
 
             for title in self.titles:
                 value = data[title]
-                if isinstance(value, int) or isinstance(value, float) or isinstance(value, numpy.int64):
+                if isinstance(value, int) or isinstance(value, float) or isinstance(value, numpy.int64) or isinstance(value, numpy.float32):
                     strValue = str(value)
                 else:
                     strValue =  ' '.join(str(x) for x in value)

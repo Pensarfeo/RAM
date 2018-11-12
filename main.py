@@ -12,8 +12,8 @@ import network
 import config
 
 # consts
-EPHOCS = 0
-TRAIN = True
+EPHOCS = 25
+TRAIN = False
 runName = "feededGuess2LocationNet" 
 modelSaveDir = os.path.join(os.getcwd(), 'output', runName, 'trainedModels')
 modelSavePath = os.path.join(modelSaveDir, 'model.ckpt')
@@ -89,13 +89,13 @@ if __name__ == '__main__':
             tf.summary.FileWriter(graphSavePath).add_graph(sess.graph)
 
 
-            # mnist = Prepare_dataset(batch_size = config.batch_size)
+            mnist = Prepare_dataset(batch_size = config.batch_size)
             tf.global_variables_initializer().run()
 
-            # if os.path.isfile(modelSavePath + ".index"):
-            #     saver.restore(sess, modelSavePath)
+            if os.path.isfile(modelSavePath + ".index"):
+                saver.restore(sess, modelSavePath)
 
-            # timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
+            timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
             
             for j in range(1, EPHOCS):
                 for i in range(1, (mnist.train_size // config.batch_size)):
