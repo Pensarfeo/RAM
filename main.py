@@ -14,7 +14,7 @@ import config
 # consts
 EPHOCS = 25 * 5
 TRAIN = True
-runName = "feededGuess2LocationNet-2layerLocationNet-normalized" 
+runName = "feededGuess2LocationNet-rewardConfusionDecrease" 
 modelSaveDir = os.path.join(os.getcwd(), 'output', runName, 'trainedModels')
 modelSavePath = os.path.join(modelSaveDir, 'model.ckpt')
 trainingString = 'training' if (TRAIN == True) else 'testing'
@@ -31,13 +31,36 @@ if __name__ == '__main__':
     labels_ph = tf.placeholder(tf.int64, [None])
 
     # Create network
-    logits, retina = network.setUp(images_ph)
+    classifier, retina = network.setUp(images_ph)
 
     with tf.variable_scope('Losses'):
         # Cross-entropy
-        softmax = tf.nn.softmax(logits)
-        entropy_value = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_ph)
+        softmax = tf.nn.softmax(classifier.logits[-1])
+        logits = classifier.logits[-1]
+        entropy_value = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = logits, labels = labels_ph)
         entropy_value = tf.reduce_mean(entropy_value)
+
+
+
+        # logitsList = tf.concat(classifier.logits, axis = 0)
+        # labelsList = tf.tile(labels_ph, [config.num_glimpses])
+        # entropyValueList = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = logitsList, labels = labelsList)
+
+        # import pdb
+        # pdb.set_trace()
+
+        # entropyValueList = tf.reshape(entropyValueList, [config.num_glimpses])
+        # entropyValueList0 = tf.slice(entropyValueList, [0], [config.num_glimpses - 1])
+        # entropyValueList1 = tf.slice(entropyValueList, [1], [config.num_glimpses - 1])
+        
+        # scaleList = [(lambda y: (config.scaleFactor**y))(x) for x in range(1,6)]
+        # scaleList = tf.convert_to_tensor(scaleList, dtype=tf.float32)
+
+        # entropyStepsDif = tf.subtract(entropyValueList1, entropyValueList1)
+        # entropyStepsDif = tf.multiply(scaleList, entropyStepsDif)
+        # entropyStepsDif = tf.reduce_mean(entropyStepsDif)
+
+
 
         # Reward; caculated but not being used for any training...
         labels_prediction = tf.argmax(softmax, 1)

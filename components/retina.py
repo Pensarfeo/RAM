@@ -1,7 +1,7 @@
 import tensorflow as tf
 from components.glimpse import GlimpsNetwork
 from components.location import LocationNetwork
-from components.classifier import classifierNetwork
+from components.classifier import ClassifierNetwork
 
 class Retina():
     def __init__(self, images_ph):
@@ -10,6 +10,7 @@ class Retina():
         self.sample_coor_list = []
         self.location_network = LocationNetwork()  
         self.glimps_network = GlimpsNetwork(images_ph)
+        self.classifierNetwor = ClassifierNetwork()
 
     def firstGlimpse(self):
         init_location = tf.random_uniform((tf.shape(self.images_ph)[0], 2), minval=-1.0, maxval=1.0)
@@ -18,10 +19,11 @@ class Retina():
 
         return output
 
-    def getNext(self, currentState, i, glimpseScope = None):
-        action_net = classifierNetwork(currentState)
-        sample_coor, origin_coor = self.location_network(currentState, action_net.outputs)
+    def getNext(self, currentState):
+        classifier = self.classifierNetwor(currentState)
+
+        sample_coor, origin_coor = self.location_network(currentState, classifier.outputs)
         self.origin_coor_list.append(origin_coor)
         self.sample_coor_list.append(sample_coor)
         glimpse = self.glimps_network(sample_coor)
-        return [glimpse, action_net]
+        return [glimpse, classifier]

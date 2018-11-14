@@ -1,8 +1,6 @@
 import tensorlayer as tl
 import tensorflow as tf
 
-from tensorflow.python.ops import variable_scope
-
 from components.retina import Retina
 from components.seq2seq import rnn_decoder
 
@@ -23,18 +21,15 @@ def setUp(images_ph):
 
     with tf.variable_scope('coreNetwork', reuse = tf.AUTO_REUSE):
         for i in range(0, 6):
-            REUSE = True if i>0 else None
-
             with tf.variable_scope('rnn'):
 
                 output, state = lstm_cell(inputs[-1], state)
 
-                glimpse, action_net = retina.getNext(output, i)
+                glimpse, classifier = retina.getNext(output)
 
                 inputs.append(glimpse)
                 outputs.append(output)
 
-
-    return [action_net.outputs, retina]
+    return [retina.classifierNetwor, retina]
 
 

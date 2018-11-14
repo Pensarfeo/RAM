@@ -17,7 +17,9 @@ class LocationNetwork(object):
             guess = tl.layers.BatchNormLayer(guess, name='guess_bn_1')
             guess = tf.nn.relu(guess.outputs, name='guess_relu_1')
 
-            self.location_net = tl.layers.InputLayer(tf.concat([state, guess], axis = 1))
+           
+
+            self.location_net = tl.layers.InputLayer(tf.concat([state, state], axis = 1))
             self.location_net = tl.layers.DenseLayer(self.location_net, n_units = 128 / 2, name='fc0')
             self.location_net = tl.layers.BatchNormLayer(self.location_net, name='bn_0')
             self.location_net = tf.nn.relu(self.location_net.outputs, name='relu_0')

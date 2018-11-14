@@ -1,6 +1,7 @@
 win_size = 8                # The size of glimps
 batch_size = 32
 loc_std = 0.22
+scaleFactor = 0.5
 # depth = 1
 # hg_size = hl_size = 128     # The vector size for glimps network (before merge)
 # g_size = 256                # The size of glimps vector (after merge)
