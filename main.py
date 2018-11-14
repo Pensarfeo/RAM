@@ -12,28 +12,18 @@ import network
 import config
 
 # consts
-EPHOCS = 25
-TRAIN = False
-runName = "feededGuess2LocationNet" 
+EPHOCS = 25 * 5
+TRAIN = True
+runName = "feededGuess2LocationNet-2layerLocationNet-normalized" 
 modelSaveDir = os.path.join(os.getcwd(), 'output', runName, 'trainedModels')
 modelSavePath = os.path.join(modelSaveDir, 'model.ckpt')
-trainingString = 'training' if (TRAIN==True) else 'testing'
+trainingString = 'training' if (TRAIN == True) else 'testing'
 dataSavePath = os.path.join('output', runName, 'data', trainingString )
 graphSavePath = os.path.join('output', runName, 'graph', trainingString )
 
 print('graph location ======================================>')
-print(graphSavePath)
+print('tensorboard --logdir ',graphSavePath)
 print('<====================================== graph location ')
-
-# SAVE_MODEL_DIR = os.path.join(os.getcwd(), 'saved', MODEL + '.ckpt')
-# This function is defining the prob of going to an other point as the log prob of a gaussian.
-# ence each jump, given the previous jump, is give by the previous jump origin (expectation of the gaussian)
-# and a predifined sigma.
-# This does not seem like a good procedure as the next step is not necessarely given information about the nature of the current object beeing seen.
-
-# list of origin coordinates shape = [1, 320 (batchsize * M), 2 (x,y) ]
-# list of sample coordinates shape = [1, 320 (batchsize * M), 2 (x,y) ]
-# signa : a sigma for the gaussian... why?
 
 if __name__ == '__main__':
     # Create placeholder
@@ -88,19 +78,22 @@ if __name__ == '__main__':
             # save gaph
             tf.summary.FileWriter(graphSavePath).add_graph(sess.graph)
 
-
             mnist = Prepare_dataset(batch_size = config.batch_size)
             tf.global_variables_initializer().run()
+
 
             if os.path.isfile(modelSavePath + ".index"):
                 saver.restore(sess, modelSavePath)
 
             timer = Timer(nsteps = (mnist.train_size // config.batch_size)*EPHOCS)
-            
-            for j in range(1, EPHOCS):
+
+            if not os.path.exists(modelSaveDir):
+                os.makedirs(modelSaveDir)
+
+            for j in range(0, EPHOCS):
                 for i in range(1, (mnist.train_size // config.batch_size)):
                     # images, labels = mnist.train.next_batch(config.batch_size)
-                    images, labels = mnist()
+                    images, labels = mnist(epoch = j)
                     images = np.tile(images, [config.M, 1])
                     labels = np.tile(labels, [config.M])
 
@@ -121,14 +114,15 @@ if __name__ == '__main__':
                             '\titer: ', i,
                             '\tloss: ', _loss_value,
                             '\treward: ', _reward_value,
-                            '\ttimeElapsed: ', timer.elapsed(step = (i + (j - 1) * (mnist.train_size // config.batch_size))),
+                            '\ttimeElapsed: ', timer.elapsed(step = (i + j * (mnist.train_size // config.batch_size))),
                             '\tremaining: ', timer.left()
                         )
 
-            if not os.path.exists(modelSaveDir):
-                os.makedirs(modelSaveDir)
+                if i % (25) == 0:
+                    saver.save(sess, modelSavePath)
+
     
-            saver.save(sess, modelSavePath)
+            
 
     else:
         # --------------------------------------------------------------
@@ -141,12 +135,12 @@ if __name__ == '__main__':
             # save gaph
             # tf.summary.FileWriter('./temp/graph').add_graph(sess.graph)
 
-            trainingBatchSize = 1
+            trainingBatchSize = config.batch_size
             mnist = Prepare_dataset(batch_size = trainingBatchSize)
             tf.global_variables_initializer().run()
             saver.restore(sess, modelSavePath)
 
-            for i in range(1, (mnist.train_size // 1)):
+            for i in range(1, (mnist.train_size // trainingBatchSize)):
                 images, labels = mnist()
 
                 _softmax = sess.run([softmax], feed_dict = {
@@ -154,21 +148,21 @@ if __name__ == '__main__':
                     labels_ph: labels
                 })
 
-                dataSaver.add({
-                        'n': i
-                        ,'softmax': _softmax[0][0]
-                        ,'label': labels[0]
-                })
+                for j in range(0, trainingBatchSize):
+                    dataSaver.add({
+                            'n': i + j
+                            ,'softmax': _softmax[0][j]
+                            ,'label': labels[j]
+                    })
                 # print(i, i % 10)
-                if i % (1000) == 0:
+                if i % (1000 // trainingBatchSize) == 0:
                     # dataSaver.add({
                     #     'n': i
                     #     ,'prediction': _labels_prediction
                     #     ,'label': labels
                     # })
                     print(
-                        '\n: ', i
+                        '\\n: ', i
                         # , '\tloss: ', _labels_prediction
                         # , '\treward: ', _reward_value
-                        , '\tsoftmax: ', _softmax
                     )
