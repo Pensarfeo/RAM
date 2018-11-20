@@ -27,8 +27,8 @@ print('<====================================== graph location ')
 
 if __name__ == '__main__':
     # Create placeholder
-    images_ph = tf.placeholder(tf.float32, [320, 28 * 28])
-    labels_ph = tf.placeholder(tf.int64, [320])
+    images_ph = tf.placeholder(tf.float32, [None, 28 * 28])
+    labels_ph = tf.placeholder(tf.int64, [None])
 
     # Create network
     classifier, retina = network.setUp(images_ph)
