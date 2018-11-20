@@ -7,6 +7,8 @@ from tensorflow.contrib import distributions
 from data import Prepare_dataset
 from lib.saveData import DataSaver
 from lib.timer import Timer
+from pygit2 import Repository
+
 import network
 
 import config
@@ -14,7 +16,8 @@ import config
 # consts
 EPHOCS = 25 * 5
 TRAIN = True
-runName = "feededGuess2LocationNet-rewardConfusionDecrease" 
+
+runName = Repository('.').head.shorthand
 modelSaveDir = os.path.join(os.getcwd(), 'output', runName, 'trainedModels')
 modelSavePath = os.path.join(modelSaveDir, 'model.ckpt')
 trainingString = 'training' if (TRAIN == True) else 'testing'
@@ -46,7 +49,6 @@ if __name__ == '__main__':
             # IMPORTANT lop(pn) should be bigger than the other values
             # In summary, we reward initially good solutions, we don't punish initial uncertainty and reward final certainty!
 
-    
             # Reward for 
             logitsList = tf.concat(classifier.logits, axis = 0)
             labelsList = tf.tile(labels_ph, [config.num_glimpses])
@@ -69,13 +71,13 @@ if __name__ == '__main__':
             reward = tf.reduce_mean(rewards)
         '''     
         # Reward; punish jumping...
-        # mu = tf.stack(retina.origin_coor_list)
-        # sampled = tf.stack(retina.sample_coor_list)
-        # gaussian = distributions.Normal(mu, config.loc_std)
-        # _log = gaussian.log_prob(sampled)
-        # _log = tf.reduce_sum(_log, 2)
-        # _log = tf.transpose(_log)
-        # _log_ratio = tf.reduce_mean(_log)
+        mu = tf.stack(retina.origin_coor_list)
+        sampled = tf.stack(retina.sample_coor_list)
+        gaussian = distributions.Normal(mu, config.loc_std)
+        _log = gaussian.log_prob(sampled)
+        _log = tf.reduce_sum(_log, 2)
+        _log = tf.transpose(_log)
+        _log_ratio = tf.reduce_mean(_log)
         
         # Hybric loss
         loss = entropy_value
@@ -139,10 +141,14 @@ if __name__ == '__main__':
                             '\ttimeElapsed: ', timer.elapsed(step = (i + j * (mnist.train_size // config.batch_size))),
                             '\tremaining: ', timer.left()
                         )
+                if j % (5) == 0:
+                    print('Tot Time Elapsed: ', timer.elpasedTot(), ' after ', j, ' steps')
 
-                if i % (25) == 0:
+                if j % (25) == 0:
                     print('------------------ Saving Session ------------------')
                     saver.save(sess, modelSavePath)
+            print('------------------ Training Completed ------------------')
+            print('Tot Time Elapsed ', timer.elpasedTot() )
 
     
             

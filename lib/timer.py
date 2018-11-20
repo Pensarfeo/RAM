@@ -21,7 +21,13 @@ class Timer:
 
         return lap
 
+    def printTime(self, timeDetal):
+        return time.strftime("%H:%M:%S",  time.gmtime(timeDetal))
+    
+    def elpasedTot(self):
+        return self.printTime(time.time() - self.start)
+
     def left(self):
         avLap = reduce((lambda x, y: x + y), self.laps, 0)/self.prevStep
         remainininTime = avLap * (self.nsteps - self.prevStep)
-        return time.strftime("%H:%M:%S",  time.gmtime(remainininTime))
+        return self.printTime(remainininTime)
