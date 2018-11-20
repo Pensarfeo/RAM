@@ -141,6 +141,7 @@ if __name__ == '__main__':
                         )
 
                 if i % (25) == 0:
+                    print('------------------ Saving Session ------------------')
                     saver.save(sess, modelSavePath)
 
     
