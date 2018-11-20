@@ -13,7 +13,9 @@ class Retina():
         self.classifierNetwor = ClassifierNetwork()
 
     def firstGlimpse(self):
-        init_location = tf.random_uniform((tf.shape(self.images_ph)[0], 2), minval=-1.0, maxval=1.0)
+
+        # init_location = tf.random_uniform((tf.shape(self.images_ph)[0], 2), minval=-1.0, maxval=1.0)
+        init_location = tf.zeros((tf.shape(self.images_ph)[0], 2), tf.float32)
         self.origin_coor_list.append(init_location)
         output = self.glimps_network(init_location)
 

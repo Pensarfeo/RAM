@@ -62,22 +62,24 @@ if __name__ == '__main__':
             entropyStepsDif = tf.multiply(scaleList, entropyStepsDif)
             entropyStepsDif = tf.reduce_mean(entropyStepsDif)
 
-            # Reward; caculated but not being used for any training...
-            softmax = tf.nn.softmax(classifier.logits[-1])
-            labels_prediction = tf.argmax(softmax, 1)
-            correct_predictions = tf.cast(tf.equal(labels_prediction, labels_ph), tf.float32)
-            rewards = tf.expand_dims(correct_predictions, 1)
-            rewards = tf.tile(rewards, (1, config.num_glimpses)) 
-            reward = tf.reduce_mean(rewards)
+
         '''     
-        # Reward; punish jumping...
-        mu = tf.stack(retina.origin_coor_list)
-        sampled = tf.stack(retina.sample_coor_list)
-        gaussian = distributions.Normal(mu, config.loc_std)
-        _log = gaussian.log_prob(sampled)
-        _log = tf.reduce_sum(_log, 2)
-        _log = tf.transpose(_log)
-        _log_ratio = tf.reduce_mean(_log)
+        # Reward; caculated but not being used for any training...
+        softmax = tf.nn.softmax(classifier.logits[-1])
+        labels_prediction = tf.argmax(softmax, 1)
+        correct_predictions = tf.cast(tf.equal(labels_prediction, labels_ph), tf.float32)
+        rewards = tf.expand_dims(correct_predictions, 1)
+        rewards = tf.tile(rewards, (1, config.num_glimpses)) 
+        reward = tf.reduce_mean(rewards)
+
+        # # Reward; punish jumping...
+        # mu = tf.stack(retina.origin_coor_list)
+        # sampled = tf.stack(retina.sample_coor_list)
+        # gaussian = distributions.Normal(mu, config.loc_std)
+        # _log = gaussian.log_prob(sampled)
+        # _log = tf.reduce_sum(_log, 2)
+        # _log = tf.transpose(_log)
+        # _log_ratio = tf.reduce_mean(_log)
         
         # Hybric loss
         loss = entropy_value
@@ -144,7 +146,7 @@ if __name__ == '__main__':
                 if j % (5) == 0:
                     print('Tot Time Elapsed: ', timer.elpasedTot(), ' after ', j, ' steps')
 
-                if j % (25) == 0:
+                if ((j % (25) == 0) & (j != 0)):
                     print('------------------ Saving Session ------------------')
                     saver.save(sess, modelSavePath)
             print('------------------ Training Completed ------------------')
