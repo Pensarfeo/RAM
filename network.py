@@ -30,6 +30,6 @@ def setUp(images_ph):
                 inputs.append(glimpse)
                 outputs.append(output)
 
-    return [retina.classifierNetwor, retina]
+    return retina.classifierNetwor
 
 
