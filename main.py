@@ -10,7 +10,7 @@ from lib.timer import Timer
 from pygit2 import Repository
 
 import network
-from components.loss import losses
+from components.optimizer import Optimizer
 import config
 
 # consts
@@ -37,14 +37,10 @@ if __name__ == '__main__':
     classifier = network.setUp(images_ph)
 
     # define loss
-    grads, var_list, loss, globalReward, entropy_value, fastConvergeEntropy = losses(classifier.logits, labels_ph)
+    optimizer = Optimizer(classifier.logits, labels_ph)
 
     # define optimizer
-    with tf.variable_scope('Optimizer'):
-        # Optimizer
-        opt = tf.train.AdamOptimizer(0.0001)
-        global_step = tf.get_variable('global_step', initializer=tf.constant(0), trainable=False)
-        train_op = opt.apply_gradients(zip(grads, var_list), global_step=global_step)
+
     
 
     saver = tf.train.Saver()
@@ -52,7 +48,7 @@ if __name__ == '__main__':
 
     if TRAIN:
         
-        dataSaver = DataSaver('ephoch', 'iter', 'totLoss', 'fastConvergeEntropy', 'reward', filename = dataSavePath)
+        dataSaver = DataSaver('ephoch', 'iter', 'totLoss', 'fastConvergeEntropy', 'stableConvergeEntropy', 'reward', filename = dataSavePath)
 
         # Train
         with tf.Session() as sess:
@@ -78,26 +74,37 @@ if __name__ == '__main__':
                     images = np.tile(images, [config.M, 1])
                     labels = np.tile(labels, [config.M])
 
-                    _loss_value, _globalReward, _fastConvergeEntropy, _ = sess.run([loss, globalReward, fastConvergeEntropy, train_op], feed_dict = {
-                        images_ph: images,
-                        labels_ph: labels
-                    })
-                    # print(i, i % 10)
+                    loss, reward, fcLoss, stLoss, _ = sess.run(
+                        [
+                            optimizer.loss,
+                            optimizer.accuracy,
+                            optimizer.fastConvergeEntropy,
+                            optimizer.stableConvergeEntropy,
+                            optimizer.train_op
+                        ],
+                        feed_dict = {
+                            images_ph: images,
+                            labels_ph: labels
+                        }
+                    )
+                    
                     if i % (100) == 0:
                         dataSaver.add({
                             'ephoch': j
                             , 'iter': i
-                            , 'totLoss': _loss_value
-                            , 'fastConvergeEntropy': _fastConvergeEntropy
-                            ,'reward': _globalReward
+                            , 'totLoss': loss
+                            , 'fastConvergeEntropy': fcLoss
+                            , 'stableConvergeEntropy': stLoss
+                            ,'reward': reward
                         })
                         print(
                             'ephoc: ', j,
                             '\titer: ', i,
-                            '\tloss: ', roundDec(_loss_value),
-                            '\treward: ', roundDec(_globalReward),
+                            '\tloss: ', roundDec(loss),
+                            '\treward: ', roundDec(reward),
                             '\ttimeElapsed: ', timer.elapsed(step = (i + j * (mnist.train_size // config.batch_size))),
-                            '\tfastConvergeEntropy :', roundDec(_fastConvergeEntropy),
+                            '\tfastConvergeEntropy :', roundDec(fcLoss),
+                            '\tstableConvergeEntropy :', roundDec(stLoss),
                             '\tremaining: ', timer.left()
                         )
                 if j % (5) == 0:

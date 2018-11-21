@@ -29,4 +29,4 @@ class Retina():
         self.sample_coor_list.append(sample_coor)
         glimpse = self.glimps_network(sample_coor)
 
-        return [glimpse, classifier]
+        return glimpse

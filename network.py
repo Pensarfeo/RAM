@@ -25,7 +25,7 @@ def setUp(images_ph):
 
                 output, state = lstm_cell(inputs[-1], state)
 
-                glimpse, classifier = retina.getNext(output)
+                glimpse = retina.getNext(output)
 
                 inputs.append(glimpse)
                 outputs.append(output)
