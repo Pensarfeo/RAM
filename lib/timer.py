@@ -9,7 +9,7 @@ class Timer:
         self.prev = self.start
         self.laps = []
 
-    def elapsed(self, step = 0):
+    def elapsed(self, step = 0, round=True):
         # get eleapsed        
         end = time.time()
         prev = self.prev
@@ -19,7 +19,8 @@ class Timer:
         self.laps.append(lap)
         self.prevStep = step
 
-        return lap
+        output = "{0:.2f}".format(lap) if round else lap
+        return output
 
     def printTime(self, timeDetal):
         return time.strftime("%H:%M:%S",  time.gmtime(timeDetal))

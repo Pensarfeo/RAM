@@ -23,17 +23,23 @@ def losses(listLogits, labels_ph):
         logitsHistory = tf.transpose(logitsHistory, [1,0,2])
         
         scaleFastConvergeEntropy = [(lambda y: [(config.scaleFactor**y)/config.num_glimpses])(x) for x in range(0, config.num_glimpses)]
-        scaleFastConvergeEntropy = tf.constant(scaleFastConvergeEntropy, dtype=tf.float32)
-        scaleFastConvergeEntropy = tf.tile(scaleFastConvergeEntropy, [1, 10])
+        scaleFastConvergeEntropy = tf.constant([scaleFastConvergeEntropy], dtype=tf.float32)
+        scaleFastConvergeEntropy = tf.tile(scaleFastConvergeEntropy, [tf.shape(logitsHistory)[0], 1, 10])
 
-        scaledFastConvergelogitsHistory = tf.map_fn(lambda lh: tf.multiply(lh, scaleFastConvergeEntropy), logitsHistory)
-        scaledFastConvergelogitsHistory = tf.reshape(scaledFastConvergelogitsHistory, [tf.shape(labels_ph)[0]*config.num_glimpses, 10])
+        # pdb.set_trace()
 
-        fastConvergeLabelsList = tf.tile(labels_ph, [config.num_glimpses])
+        scaledFastConvergelogitsHistory = tf.multiply(scaleFastConvergeEntropy, logitsHistory)
+        scaledFastConvergelogitsHistory = tf.reduce_mean(scaledFastConvergelogitsHistory, 1)
 
-        batchFastConvergeEntropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = scaledFastConvergelogitsHistory, labels = fastConvergeLabelsList)
+        # scaledFastConvergelogitsHistory = tf.reshape(scaledFastConvergelogitsHistory, [tf.shape(labels_ph)[0]*config.num_glimpses, 10])
+        # fastConvergeEntropy = tf.reduce_mean(scaledFastConvergelogitsHistory)
+
+        # fastConvergeLabelsList = tf.tile(labels_ph, [config.num_glimpses])
+
+        batchFastConvergeEntropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = scaledFastConvergelogitsHistory, labels = labels_ph)
         fastConvergeEntropy = tf.reduce_mean(batchFastConvergeEntropy)
-        
+        # fastConvergeEntropy = tf.Print(fastConvergeEntropy, [fastConvergeEntropy])
+
 
         # entropyValueList = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = logitsList, labels = labelsList)
         # entropyValueList = tf.reshape(entropyValueList, [config.num_glimpses, -1])
@@ -61,9 +67,10 @@ def losses(listLogits, labels_ph):
         # _log = tf.reduce_sum(_log, 2)
         # _log = tf.transpose(_log)
         # _log_ratio = tf.reduce_mean(_log)
-        # fastConvergeEntropy = tf.Print(fastConvergeEntropy, [fastConvergeEntropy])
+
+        
         # Hybric loss
-        loss = entropy_value #+ fastConvergeEntropy
+        loss = entropy_value + fastConvergeEntropy
         var_list = tf.trainable_variables()
         grads = tf.gradients(loss, var_list)
-    return [grads, var_list, loss, globalReward]
+    return [grads, var_list, loss, globalReward, entropy_value, fastConvergeEntropy]

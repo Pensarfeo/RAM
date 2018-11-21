@@ -37,7 +37,7 @@ if __name__ == '__main__':
     classifier = network.setUp(images_ph)
 
     # define loss
-    grads, var_list, loss, globalReward = losses(classifier.logits, labels_ph)
+    grads, var_list, loss, globalReward, entropy_value, fastConvergeEntropy = losses(classifier.logits, labels_ph)
 
     # define optimizer
     with tf.variable_scope('Optimizer'):
@@ -48,10 +48,11 @@ if __name__ == '__main__':
     
 
     saver = tf.train.Saver()
-    
+    roundDec = lambda x: "{0:.2f}".format(x)
+
     if TRAIN:
         
-        dataSaver = DataSaver('ephoch', 'iter', 'loss', 'reward', filename = dataSavePath)
+        dataSaver = DataSaver('ephoch', 'iter', 'totLoss', 'fastConvergeEntropy', 'reward', filename = dataSavePath)
 
         # Train
         with tf.Session() as sess:
@@ -77,7 +78,7 @@ if __name__ == '__main__':
                     images = np.tile(images, [config.M, 1])
                     labels = np.tile(labels, [config.M])
 
-                    _loss_value, _globalReward, _ = sess.run([loss, globalReward, train_op], feed_dict = {
+                    _loss_value, _globalReward, _fastConvergeEntropy, _ = sess.run([loss, globalReward, fastConvergeEntropy, train_op], feed_dict = {
                         images_ph: images,
                         labels_ph: labels
                     })
@@ -86,15 +87,17 @@ if __name__ == '__main__':
                         dataSaver.add({
                             'ephoch': j
                             , 'iter': i
-                            , 'loss': _loss_value
+                            , 'totLoss': _loss_value
+                            , 'fastConvergeEntropy': _fastConvergeEntropy
                             ,'reward': _globalReward
                         })
                         print(
                             'ephoc: ', j,
                             '\titer: ', i,
-                            '\tloss: ', _loss_value,
-                            '\treward: ', _globalReward,
+                            '\tloss: ', roundDec(_loss_value),
+                            '\treward: ', roundDec(_globalReward),
                             '\ttimeElapsed: ', timer.elapsed(step = (i + j * (mnist.train_size // config.batch_size))),
+                            '\tfastConvergeEntropy :', roundDec(_fastConvergeEntropy),
                             '\tremaining: ', timer.left()
                         )
                 if j % (5) == 0:
