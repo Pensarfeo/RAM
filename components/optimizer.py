@@ -1,6 +1,5 @@
 import tensorflow as tf
 import config
-import pdb
 
 class Optimizer():
     def __init__(self, classifier, labels_ph):
