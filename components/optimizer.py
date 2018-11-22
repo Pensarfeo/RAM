@@ -3,8 +3,9 @@ import config
 import pdb
 
 class Optimizer():
-    def __init__(self, listLogits, labels_ph):
-        self.listLogits = listLogits
+    def __init__(self, classifier, labels_ph):
+        self.listLogits = classifier.logits
+        self.listSoftmax = classifier.softmax
         self.labels_ph = labels_ph
         # set Up Optimizer
         self.getLosses()
@@ -54,7 +55,7 @@ class Optimizer():
             self.entropy_value = tf.reduce_mean(entropy_value)
             
             # Hybric loss
-            self.loss = self.entropy_value + self.fastConvergeEntropy + self.stableConvergeEntropy
+            self.loss = self.entropy_value# + self.fastConvergeEntropy + self.stableConvergeEntropy
             self.var_list = tf.trainable_variables()
             self.grads = tf.gradients(self.loss, self.var_list)
 

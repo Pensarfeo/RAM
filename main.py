@@ -37,7 +37,7 @@ if __name__ == '__main__':
     classifier = network.setUp(images_ph)
 
     # define loss
-    optimizer = Optimizer(classifier.logits, labels_ph)
+    optimizer = Optimizer(classifier, labels_ph)
 
     # define optimizer
 
