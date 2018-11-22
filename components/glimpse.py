@@ -4,13 +4,13 @@ import config
 
 
 class GlimpsNetwork(object):
-    def __init__(self, location_ph):
-        self.location_ph = location_ph
+    def __init__(self, images):
+        self.images = images
         self.scope = None
 
     def getGlimpse(self, loc_tensor):
         with tf.variable_scope('getGlimpse'):
-            self.glimps_imgs = tf.reshape(self.location_ph, [tf.shape(self.location_ph)[0], 28, 28, 1], name='reshape_layer_1')
+            self.glimps_imgs = tf.reshape(self.images, [tf.shape(self.images)[0], 28, 28, 1], name='reshape_layer_1')
             self.glimps_imgs = tf.image.extract_glimpse(self.glimps_imgs, [config.win_size, config.win_size], loc_tensor)
             self.glimps_imgs = tf.reshape(self.glimps_imgs, [tf.shape(loc_tensor)[0], config.win_size * config.win_size * 1])
         return self.glimps_imgs

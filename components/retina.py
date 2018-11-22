@@ -2,6 +2,7 @@ import tensorflow as tf
 from components.glimpse import GlimpsNetwork
 from components.location import LocationNetwork
 from components.classifier import ClassifierNetwork
+from components.preview import previewNetwork
 
 class Retina():
     def __init__(self, images_ph):
@@ -12,9 +13,8 @@ class Retina():
 
     def firstGlimpse(self):
         # init_location = tf.random_uniform((tf.shape(self.images_ph)[0], 2), minval=-1.0, maxval=1.0)
-        init_location = tf.zeros((tf.shape(self.images_ph)[0], 2), tf.float32)
-        init_guess = tf.zeros((tf.shape(self.images_ph)[0], 10), tf.float32)
-        output = self.glimps_network(init_location, init_guess)
+        location, guess = previewNetwork(self.images_ph)
+        output = self.glimps_network(location, guess)
 
         return output
 
