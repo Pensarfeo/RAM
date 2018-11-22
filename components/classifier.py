@@ -12,6 +12,6 @@ class ClassifierNetwork():
             net = tl.layers.InputLayer(inputs)
             net = tl.layers.DenseLayer(net, n_units = config.num_classes, name='classification_net_fc')
             self.logits.append(net.outputs)
-            self.logits.append(tf.nn.softmax(net.outputs))
+            self.softmax.append(tf.nn.softmax(net.outputs))
             self.net = net
         return net

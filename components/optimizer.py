@@ -14,45 +14,54 @@ class Optimizer():
     
     def getLosses(self):
         with tf.variable_scope('Losses'):
+            
+            labels = tf.stop_gradient(self.labels_ph)
+            labelsOneHot = tf.one_hot(labels, 10)
 
             # format
-            logitsHistory = tf.convert_to_tensor(self.listLogits)
-            logitsHistory = tf.transpose(logitsHistory, [1,0,2])
+            softmaxHistory = tf.convert_to_tensor(self.listSoftmax)
+            softmaxTotNum = tf.cast(tf.shape(softmaxHistory)[0], tf.float32)
+            softmaxHistory = tf.transpose(softmaxHistory, [1,0,2])
 
             # Fast Guess Reward!        
             scaleFastConvergeEntropy = [(lambda y: [(config.scaleFactor**y)/config.num_glimpses])(x) for x in range(0, config.num_glimpses)]
             scaleFastConvergeEntropy = tf.constant([scaleFastConvergeEntropy], dtype=tf.float32)
-            scaleFastConvergeEntropy = tf.tile(scaleFastConvergeEntropy, [tf.shape(logitsHistory)[0], 1, 10])
+            scaleFastConvergeEntropy = tf.tile(scaleFastConvergeEntropy, [tf.shape(softmaxHistory)[0], 1, 10])
 
-            scaledFastConvergelogitsHistory = tf.multiply(scaleFastConvergeEntropy, logitsHistory)
-            scaledFastConvergelogitsHistory = tf.reduce_mean(scaledFastConvergelogitsHistory, 1)
+            softmaxFastConvergeHistory = tf.multiply(scaleFastConvergeEntropy, softmaxHistory)
+            softmaxFastConvergeAverage = tf.reduce_mean(softmaxFastConvergeHistory, 1)
 
-            batchFastConvergeEntropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = scaledFastConvergelogitsHistory, labels = self.labels_ph)
-            self.fastConvergeEntropy = tf.reduce_mean(batchFastConvergeEntropy)
+            batchFastConvergeEntropy = tf.multiply(softmaxFastConvergeAverage, labelsOneHot)
+            batchFastConvergeEntropy = tf.reduce_sum(batchFastConvergeEntropy, 1)
+            batchFastConvergeEntropy = tf.log(batchFastConvergeEntropy)
+            self.fastConvergeEntropy = tf.reduce_mean(batchFastConvergeEntropy) * -1
 
             # Stable guess reward
-            logitsHistory1 = tf.slice(logitsHistory, [0,0,0], [-1, tf.shape(logitsHistory)[1] - 1 ,-1])
-            logitsHistory2 = tf.slice(logitsHistory, [0,1,0], [-1, tf.shape(logitsHistory)[1] - 1 ,-1])
+            softmaxHistory1 = tf.slice(softmaxHistory, [0,0,0], [-1, tf.shape(softmaxHistory)[1] - 1 ,-1])
+            softmaxHistory2 = tf.slice(softmaxHistory, [0,1,0], [-1, tf.shape(softmaxHistory)[1] - 1 ,-1])
+            softmaxHistoryD =  tf.abs(softmaxHistory1 - softmaxHistory2)
 
-            deltaLogitsHistory =  tf.abs(logitsHistory1 - logitsHistory2)
-
-
-            deltaNGlipses = config.num_glimpses - 1
-            
+            deltaNGlipses = config.num_glimpses - 1            
             scaleStableConvergeEntropy = [(lambda y: [((config.scaleFactor**(deltaNGlipses - y - 1))/deltaNGlipses)])(x) for x in range(0, deltaNGlipses)]
             scaleStableConvergeEntropy = tf.constant([scaleStableConvergeEntropy], dtype=tf.float32)
-            scaleStableConvergeEntropy = tf.tile(scaleStableConvergeEntropy, [tf.shape(deltaLogitsHistory)[0], 1, 10])
+            scaleStableConvergeEntropy = tf.tile(scaleStableConvergeEntropy, [tf.shape(softmaxHistory)[0], 1, 10])
 
-            scaledStableConvergelogitsHistory = 1 - tf.multiply(scaleStableConvergeEntropy, deltaLogitsHistory)
-            scaledStableConvergelogitsHistory = tf.reduce_mean(scaledStableConvergelogitsHistory, 1)
+            softmaxHistoryD = tf.multiply(scaleStableConvergeEntropy, softmaxHistoryD)
+            softmaxHistoryD = tf.reduce_mean(softmaxHistory, 1)
+            softmaxHistoryD = 1 - softmaxHistoryD
 
-            batchStableConvergeEntropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = scaledStableConvergelogitsHistory, labels = self.labels_ph)
-            self.stableConvergeEntropy = tf.reduce_mean(batchStableConvergeEntropy)
+            batchStableConvergeEntropy = tf.multiply(softmaxHistoryD, labelsOneHot)
+            batchStableConvergeEntropy = tf.reduce_sum(batchStableConvergeEntropy, 1)
+            batchStableConvergeEntropy = tf.log(batchStableConvergeEntropy)
+            
+            self.stableConvergeEntropy = tf.reduce_mean(batchStableConvergeEntropy) * -1         
 
             # Cross-entropy
-            logits = self.listLogits[-1]
-            entropy_value = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = logits, labels = self.labels_ph)
-            self.entropy_value = tf.reduce_mean(entropy_value)
+            softmax = self.listSoftmax[-1]
+            entropy_value = tf.multiply(softmax, labelsOneHot)
+            entropy_value = tf.reduce_sum(entropy_value, 1)
+            entropy_value = tf.log(entropy_value)
+            self.entropy_value = tf.reduce_mean(entropy_value) * -1
             
             # Hybric loss
             self.loss = self.entropy_value# + self.fastConvergeEntropy + self.stableConvergeEntropy
