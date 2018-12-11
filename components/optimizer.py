@@ -63,7 +63,7 @@ class Optimizer():
             self.entropy_value = tf.reduce_mean(entropy_value) * -1
             
             # Hybric loss
-            self.loss = self.entropy_value# + self.fastConvergeEntropy + self.stableConvergeEntropy
+            self.loss = self.entropy_value + self.fastConvergeEntropy #+ self.stableConvergeEntropy
             self.var_list = tf.trainable_variables()
             self.grads = tf.gradients(self.loss, self.var_list)
 
