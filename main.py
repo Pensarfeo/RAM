@@ -104,7 +104,7 @@ if __name__ == '__main__':
                 if j % (5) == 0:
                     print('Tot Time Elapsed: ', timer.elpasedTot(), ' after ', j, ' steps')
 
-                if ((j % (25) == 0) & (j != 0)):
+                if (((j + 1) % (25) == 0) & (j != 0)):
                     print('------------------ Saving Session ------------------')
                     saver.save(sess, modelSavePath)
             print('------------------ Training Completed ------------------')

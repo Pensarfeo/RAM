@@ -18,7 +18,6 @@ class Optimizer():
         self.labels_ph = labels_ph
         # set Up Optimizer
         self.getLosses()
-        self.getAccuracy()
         self.setTrainer()
     
     def getLosses(self):
@@ -39,24 +38,22 @@ class Optimizer():
             entropy_value = tf.log(entropy_value)
             self.entropy_value = tf.reduce_mean(entropy_value) * -1
 
+            # pathCost
             _log = loglikelihood(self.graph.means, self.graph.locations, config.loc_std)
             _log_ratio = tf.reduce_mean(_log)
 
-            # Hybric loss
-            self.loss = self.entropy_value + _log_ratio
-            self.var_list = tf.trainable_variables()
-            self.grads = tf.gradients(self.loss, self.var_list)
-
-
-    def getAccuracy(self):
-        # Reward; caculated but not being used for any training...
-        with tf.variable_scope('Losses'):
+            # Reward
             softmax = tf.nn.softmax(self.listLogits[-1])
             labels_prediction = tf.argmax(softmax, 1)
             correct_predictions = tf.cast(tf.equal(labels_prediction, self.labels_ph), tf.float32)
             rewards = tf.expand_dims(correct_predictions, 1)
             rewards = tf.tile(rewards, (1, config.num_glimpses)) 
             self.accuracy = tf.reduce_mean(rewards)
+
+            # Hybric loss
+            self.loss = self.entropy_value + _log_ratio * self.accuracy
+            self.var_list = tf.trainable_variables()
+            self.grads = tf.gradients(self.loss, self.var_list)
 
     def setTrainer(self):
         with tf.variable_scope('Optimizer'):

@@ -84,3 +84,13 @@ It is worth noting that Stable convergence, seems to naturally go down in a netw
 
 ### Conclusion
 It would be interesting to better explore this interaction!
+
+## addLogLikehoodLocationLoss - WORKED
+
+I noticed that, because of 2 stop gradients in the location net
+
+```python
+            self.mean = tf.stop_gradient(tf.clip_by_value(self.location_net, -1.0, 1.0))
+            self.location = self.mean + tf.random_normal((tf.shape(state)[0], config.loc_dim), stddev=config.loc_std)
+            self.location = tf.stop_gradient(self.location) 
+```
