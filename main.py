@@ -34,10 +34,10 @@ if __name__ == '__main__':
     labels_ph = tf.placeholder(tf.int64, [None])
 
     # Create network
-    glimpse = network.setUp(images_ph)
+    graph = network.setUp(images_ph)
 
     # define loss
-    optimizer = Optimizer(glimpse.classifierNetwork, labels_ph)
+    optimizer = Optimizer(graph.classifierNetwork, labels_ph)
 
     # define optimizer
 

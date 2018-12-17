@@ -24,11 +24,14 @@ def previewNetwork(images):
                 preview_net = tl.layers.BatchNormLayer(preview_net, name='prev_bn_2')
                 preview_net = tf.nn.relu(preview_net.outputs, name='prev_relu_2')
 
-                location = tf.stop_gradient(tf.clip_by_value(preview_net, -1.0, 1.0))
+                # Add random
+                mean = tf.stop_gradient(tf.clip_by_value(preview_net, -1.0, 1.0))
+                location = mean + tf.random_normal((tf.shape(state)[0], config.loc_dim), stddev=config.loc_std)
+                location = tf.stop_gradient(location)
 
             with tf.variable_scope('firstGuess'):
                 guess = tl.layers.InputLayer(preview_imgs)
                 guess = tl.layers.DenseLayer(guess, n_units = config.num_classes, name='classification_guess_fc')
                 guess = guess
 
-        return location, guess.outputs
+        return location, mean, guess.outputs

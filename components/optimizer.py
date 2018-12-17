@@ -1,10 +1,19 @@
 import tensorflow as tf
 import config
 
+def loglikelihood(mean_arr, sampled_arr, sigma):
+    mu = tf.stack(mean_arr)                     # mu = [timesteps, batch_sz, loc_dim]
+    sampled = tf.stack(sampled_arr)             # same shape as mu
+    gaussian = distributions.Normal(mu, sigma)
+    logll = gaussian.log_prob(sampled)          # [timesteps, batch_sz, loc_dim]
+    logll = tf.reduce_sum(logll, 2)
+    logll = tf.transpose(logll)                 # [batch_sz, timesteps]
+    return logll
+
 class Optimizer():
-    def __init__(self, classifier, labels_ph):
-        self.listLogits = classifier.logits
-        self.listSoftmax = classifier.softmax
+    def __init__(self, graph, labels_ph):
+        self.listLogits = graph.classifier.logits
+        self.listSoftmax = graph.classifier.softmax
         self.labels_ph = labels_ph
         # set Up Optimizer
         self.getLosses()
@@ -22,39 +31,6 @@ class Optimizer():
             softmaxTotNum = tf.cast(tf.shape(softmaxHistory)[0], tf.float32)
             softmaxHistory = tf.transpose(softmaxHistory, [1,0,2])
 
-            # Fast Guess Reward!        
-            scaleFastConvergeEntropy = [(lambda y: [(config.scaleFactor**y)/config.num_glimpses])(x) for x in range(0, config.num_glimpses)]
-            scaleFastConvergeEntropy = tf.constant([scaleFastConvergeEntropy], dtype=tf.float32)
-            scaleFastConvergeEntropy = tf.tile(scaleFastConvergeEntropy, [tf.shape(softmaxHistory)[0], 1, 10])
-
-            softmaxFastConvergeHistory = tf.multiply(scaleFastConvergeEntropy, softmaxHistory)
-            softmaxFastConvergeAverage = tf.reduce_mean(softmaxFastConvergeHistory, 1)
-
-            batchFastConvergeEntropy = tf.multiply(softmaxFastConvergeAverage, labelsOneHot)
-            batchFastConvergeEntropy = tf.reduce_sum(batchFastConvergeEntropy, 1)
-            batchFastConvergeEntropy = tf.log(batchFastConvergeEntropy)
-            self.fastConvergeEntropy = tf.reduce_mean(batchFastConvergeEntropy) * -1
-
-            # Stable guess reward
-            softmaxHistory1 = tf.slice(softmaxHistory, [0,0,0], [-1, tf.shape(softmaxHistory)[1] - 1 ,-1])
-            softmaxHistory2 = tf.slice(softmaxHistory, [0,1,0], [-1, tf.shape(softmaxHistory)[1] - 1 ,-1])
-            softmaxHistoryD =  tf.abs(softmaxHistory1 - softmaxHistory2)
-
-            deltaNGlipses = config.num_glimpses - 1            
-            scaleStableConvergeEntropy = [(lambda y: [((config.scaleFactor**(deltaNGlipses - y - 1))/deltaNGlipses)])(x) for x in range(0, deltaNGlipses)]
-            scaleStableConvergeEntropy = tf.constant([scaleStableConvergeEntropy], dtype=tf.float32)
-            scaleStableConvergeEntropy = tf.tile(scaleStableConvergeEntropy, [tf.shape(softmaxHistory)[0], 1, 10])
-
-            softmaxHistoryD = tf.multiply(scaleStableConvergeEntropy, softmaxHistoryD)
-            softmaxHistoryD = tf.reduce_mean(softmaxHistory, 1)
-            softmaxHistoryD = 1 - softmaxHistoryD
-
-            batchStableConvergeEntropy = tf.multiply(softmaxHistoryD, labelsOneHot)
-            batchStableConvergeEntropy = tf.reduce_sum(batchStableConvergeEntropy, 1)
-            batchStableConvergeEntropy = tf.log(batchStableConvergeEntropy)
-            
-            self.stableConvergeEntropy = tf.reduce_mean(batchStableConvergeEntropy) * -1         
-
             # Cross-entropy
             softmax = self.listSoftmax[-1]
             entropy_value = tf.multiply(softmax, labelsOneHot)
@@ -63,7 +39,7 @@ class Optimizer():
             self.entropy_value = tf.reduce_mean(entropy_value) * -1
             
             # Hybric loss
-            self.loss = self.entropy_value + self.fastConvergeEntropy #+ self.stableConvergeEntropy
+            self.loss = self.entropy_value
             self.var_list = tf.trainable_variables()
             self.grads = tf.gradients(self.loss, self.var_list)
 
@@ -84,3 +60,37 @@ class Optimizer():
             opt = tf.train.AdamOptimizer(0.0001)
             global_step = tf.get_variable('global_step', initializer=tf.constant(0), trainable=False)
             self.train_op = opt.apply_gradients(zip(self.grads, self.var_list), global_step=global_step)
+
+
+# # Fast Guess Reward!        
+# scaleFastConvergeEntropy = [(lambda y: [(config.scaleFactor**y)/config.num_glimpses])(x) for x in range(0, config.num_glimpses)]
+# scaleFastConvergeEntropy = tf.constant([scaleFastConvergeEntropy], dtype=tf.float32)
+# scaleFastConvergeEntropy = tf.tile(scaleFastConvergeEntropy, [tf.shape(softmaxHistory)[0], 1, 10])
+
+# softmaxFastConvergeHistory = tf.multiply(scaleFastConvergeEntropy, softmaxHistory)
+# softmaxFastConvergeAverage = tf.reduce_mean(softmaxFastConvergeHistory, 1)
+
+# batchFastConvergeEntropy = tf.multiply(softmaxFastConvergeAverage, labelsOneHot)
+# batchFastConvergeEntropy = tf.reduce_sum(batchFastConvergeEntropy, 1)
+# batchFastConvergeEntropy = tf.log(batchFastConvergeEntropy)
+# self.fastConvergeEntropy = tf.reduce_mean(batchFastConvergeEntropy) * -1
+
+# # Stable guess reward
+# softmaxHistory1 = tf.slice(softmaxHistory, [0,0,0], [-1, tf.shape(softmaxHistory)[1] - 1 ,-1])
+# softmaxHistory2 = tf.slice(softmaxHistory, [0,1,0], [-1, tf.shape(softmaxHistory)[1] - 1 ,-1])
+# softmaxHistoryD =  tf.abs(softmaxHistory1 - softmaxHistory2)
+
+# deltaNGlipses = config.num_glimpses - 1            
+# scaleStableConvergeEntropy = [(lambda y: [((config.scaleFactor**(deltaNGlipses - y - 1))/deltaNGlipses)])(x) for x in range(0, deltaNGlipses)]
+# scaleStableConvergeEntropy = tf.constant([scaleStableConvergeEntropy], dtype=tf.float32)
+# scaleStableConvergeEntropy = tf.tile(scaleStableConvergeEntropy, [tf.shape(softmaxHistory)[0], 1, 10])
+
+# softmaxHistoryD = tf.multiply(scaleStableConvergeEntropy, softmaxHistoryD)
+# softmaxHistoryD = tf.reduce_mean(softmaxHistory, 1)
+# softmaxHistoryD = 1 - softmaxHistoryD
+
+# batchStableConvergeEntropy = tf.multiply(softmaxHistoryD, labelsOneHot)
+# batchStableConvergeEntropy = tf.reduce_sum(batchStableConvergeEntropy, 1)
+# batchStableConvergeEntropy = tf.log(batchStableConvergeEntropy)
+
+# self.stableConvergeEntropy = tf.reduce_mean(batchStableConvergeEntropy) * -1         
