@@ -31,7 +31,7 @@ class LocationNetwork(object):
             # self.location_net = tl.layers.DenseLayer(self.location_net, n_units = config.loc_dim, name='fc2')
 
             # Add random
-            self.mean = tf.stop_gradient(tf.clip_by_value(self.location_net, -1.0, 1.0))
+            self.mean = tf.clip_by_value(self.location_net, -1.0, 1.0)
             self.location = self.mean + tf.random_normal((tf.shape(state)[0], config.loc_dim), stddev=config.loc_std)
             self.location = tf.stop_gradient(self.location)
 

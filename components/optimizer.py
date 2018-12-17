@@ -4,7 +4,7 @@ import config
 def loglikelihood(mean_arr, sampled_arr, sigma):
     mu = tf.stack(mean_arr)                     # mu = [timesteps, batch_sz, loc_dim]
     sampled = tf.stack(sampled_arr)             # same shape as mu
-    gaussian = distributions.Normal(mu, sigma)
+    gaussian = tf.distributions.Normal(mu, sigma)
     logll = gaussian.log_prob(sampled)          # [timesteps, batch_sz, loc_dim]
     logll = tf.reduce_sum(logll, 2)
     logll = tf.transpose(logll)                 # [batch_sz, timesteps]
@@ -12,6 +12,7 @@ def loglikelihood(mean_arr, sampled_arr, sigma):
 
 class Optimizer():
     def __init__(self, graph, labels_ph):
+        self.graph = graph
         self.listLogits = graph.classifier.logits
         self.listSoftmax = graph.classifier.softmax
         self.labels_ph = labels_ph
@@ -37,9 +38,12 @@ class Optimizer():
             entropy_value = tf.reduce_sum(entropy_value, 1)
             entropy_value = tf.log(entropy_value)
             self.entropy_value = tf.reduce_mean(entropy_value) * -1
-            
+
+            _log = loglikelihood(self.graph.means, self.graph.locations, config.loc_std)
+            _log_ratio = tf.reduce_mean(_log)
+
             # Hybric loss
-            self.loss = self.entropy_value
+            self.loss = self.entropy_value + _log_ratio
             self.var_list = tf.trainable_variables()
             self.grads = tf.gradients(self.loss, self.var_list)
 

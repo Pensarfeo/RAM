@@ -26,7 +26,7 @@ def previewNetwork(images):
 
                 # Add random
                 mean = tf.stop_gradient(tf.clip_by_value(preview_net, -1.0, 1.0))
-                location = mean + tf.random_normal((tf.shape(state)[0], config.loc_dim), stddev=config.loc_std)
+                location = mean + tf.random_normal((tf.shape(images)[0], config.loc_dim), stddev=config.loc_std)
                 location = tf.stop_gradient(location)
 
             with tf.variable_scope('firstGuess'):

@@ -37,7 +37,7 @@ if __name__ == '__main__':
     graph = network.setUp(images_ph)
 
     # define loss
-    optimizer = Optimizer(graph.classifierNetwork, labels_ph)
+    optimizer = Optimizer(graph, labels_ph)
 
     # define optimizer
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     if TRAIN:
         
-        dataSaver = DataSaver('ephoch', 'iter', 'totLoss', 'fastConvergeEntropy', 'stableConvergeEntropy', 'reward', filename = dataSavePath)
+        dataSaver = DataSaver('ephoch', 'iter', 'loss', 'reward', filename = dataSavePath)
 
         # Train
         with tf.Session() as sess:
@@ -74,12 +74,10 @@ if __name__ == '__main__':
                     images = np.tile(images, [config.M, 1])
                     labels = np.tile(labels, [config.M])
 
-                    loss, reward, fcLoss, stLoss, _ = sess.run(
+                    loss, reward, _ = sess.run(
                         [
                             optimizer.loss,
                             optimizer.accuracy,
-                            optimizer.fastConvergeEntropy,
-                            optimizer.stableConvergeEntropy,
                             optimizer.train_op
                         ],
                         feed_dict = {
@@ -92,9 +90,7 @@ if __name__ == '__main__':
                         dataSaver.add({
                             'ephoch': j
                             , 'iter': i
-                            , 'totLoss': loss
-                            , 'fastConvergeEntropy': fcLoss
-                            , 'stableConvergeEntropy': stLoss
+                            , 'loss': loss
                             ,'reward': reward
                         })
                         print(
@@ -103,8 +99,6 @@ if __name__ == '__main__':
                             '\tloss: ', roundDec(loss),
                             '\treward: ', roundDec(reward),
                             '\ttimeElapsed: ', timer.elapsed(step = (i + j * (mnist.train_size // config.batch_size))),
-                            '\tfastConvergeEntropy :', roundDec(fcLoss),
-                            '\tstableConvergeEntropy :', roundDec(stLoss),
                             '\tremaining: ', timer.left()
                         )
                 if j % (5) == 0:

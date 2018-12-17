@@ -1,7 +1,6 @@
 import tensorlayer as tl
 import tensorflow as tf
 
-from components.retina import Retina
 from components.seq2seq import rnn_decoder
 
 from components.glimpse import GlimpsNetwork
@@ -20,7 +19,7 @@ class StateTracker():
             self.state = self.lstm_cell.zero_state(stateSize, tf.float32)
 
     def __call__(self, glimpse):
-            self.output, self.state = self.lstm_cell(glimpse, self.state)
+        self.output, self.state = self.lstm_cell(glimpse, self.state)
         return self.output
 
 class CoreNetwork():
@@ -29,7 +28,7 @@ class CoreNetwork():
         # init core networks
         self.location_network = LocationNetwork()  
         self.glimpse = GlimpsNetwork(images_ph)
-        self.classifierNetwork = ClassifierNetwork()
+        self.classifier = ClassifierNetwork()
         self.stateTracker = StateTracker(tf.shape(images_ph)[0])
 
         # memory
@@ -45,22 +44,21 @@ class CoreNetwork():
         location, mean, guess = previewNetwork(self.images_ph)
         
         self.locations.append(location)
-        self.mean.append(mean)
+        self.means.append(mean)
         self.guesses.append(guess)
 
     def __call__(self):
         glimpse = self.glimpse(self.locations[-1], self.guesses[-1])
         currentState = self.stateTracker(glimpse)
-        self.guesses += self.classifierNetwork(currentState)
-        self.locations, self.means += self.location_network(currentState, classifier)
-
-        return glimpse, sample_coor, mean_coor
+        self.guesses += self.classifier(currentState)
+        location, mean = self.location_network(currentState, self.guesses[-1])
+        self.locations.append(location)
+        self.means.append(mean)
 
 def setUp(images_ph):    
     # Construct core rnn network
-    coreNetwork = CoreNetwork(images_ph)
-
     with tf.variable_scope('coreNetwork', reuse = tf.AUTO_REUSE):
+        coreNetwork = CoreNetwork(images_ph)
         for i in range(0, 6):
             with tf.variable_scope('rnn'):
                 coreNetwork()

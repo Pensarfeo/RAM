@@ -15,4 +15,4 @@ class ClassifierNetwork():
             self.logits.append(net)
             self.softmax.append(tf.nn.softmax(net))
             self.net = net
-        return 
+        return self.net
