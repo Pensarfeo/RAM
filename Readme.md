@@ -1,27 +1,86 @@
-# RAM
-[![Packagist](https://img.shields.io/badge/Tensorflow-1.3.0-yellow.svg)]()
-[![Packagist](https://img.shields.io/badge/Tensorlayer-1.6.1-blue.svg)]()    
+# RAM - MOD
 
+A toy example of how better connecting networks can significantly improve performance by several times!
 
-Abstract
----
-This is the re-implementation of the original paper - Recurrent Models of Visual Attention. There're two previous implementation link:    
-[link1](https://github.com/zhongwen/RAM)     
-[link2](https://github.com/jlindsey15/RAM)    
-I also provide the [link](https://arxiv.org/abs/1406.6247)[1] to the original paper. 
-    
-Module Structure
----
+The experiments are based on mostly making sure that the classifier network is properly connected to the other parts of the network.
 
-![](https://github.com/SunnerLi/ram/blob/master/img/network.jpg) 
+This are the experiments with a list of comments
 
-Contribution
-----
-1. First, the original project I refer cannot execute properly since some API can only support the version which are lower than 1.0.0. This project use more newer API to adapt the current version of Tensorflow.     
-2. Next, I use tensorlayer to simplify some common operations. In original project, the author just use native tensorflow to build the whole module. This change can make the whole program be more clear.    
-3. Last but not least, In the original paper, it shows that the baseline mechanism can reduce the influence of unstable variance. In my implementation, I use batch normalization layer to reach the same purpose. Luckily, the result is better over my expectation.     
+## standard-6glimps
 
-Reference
-----
+## feedLocationNetwork - WORKS
 
-[1] V.Mnih, N.Heess, A.Graves, and K.Kavukcuoglu, “Recurrent Models of Visual Attention,” _Arxiv_, 2014.
+This network feeds the classifier network to the location network. The intuition is that the location network encodes some info about the expected class and its already encoded by the classifyer. 
+
+## rewardConfusioneDecrease - WRONG IMPLEMENTATION
+This was wrong implementation!!!
+
+## noLowerPartGlipmseNet
+**Goal**: to understand if the lower part of the glimpse net has any real effect.
+
+**Result**: it does improve the convergence... but **don't know why!**
+
+## allwaysStartFrom0 - WORKS
+**Goal**: remove the initial point uncertainty.
+
+**Result**: it does improve the convergence. As the network can learn a better exploration strategy
+
+## removeLocationNoice - NO BUENO
+**Goal**: just like the previous one, may be by removing the noise in the location the network will learn more reliable strategies.
+
+**RESULT**: It does not help the network and slows convergence. My guess is that a bit of randomness helps the network discover unexpected exploration paths.
+
+## fastConvergeLoss  - WRONG IMPLEMENTATION
+## fastConvergeLoss-measureOnly - WRONG IMPLEMENTATION
+## stableConvergeLoss - WRONG IMPLEMENTATION
+## stableConvergeLoss-measureOnly - WRONG IMPLEMENTATION
+
+## customSoftMax - WORKS
+**GOAL**: to write a custom soft max to use for fast and stable convergence loss experiments
+
+## feedGuessToState - WORKS
+**GOAL**: The LSTM network should also have some knowledge of the current expectation. We feed the classifier's output, together with the glimpse network output.
+
+**RESULT**: It works and speeds up the convergence!
+
+## addPreviewNetwork - WORKS
+**GOAL**: Rather than starting from the same point, we allow the network to take a very scaled down glimpse of the whole image to select the starting point
+
+**RESULT**: It works and speeds up the convergence!
+
+## addFastConvergence
+**GOAL**: we implement fast and stable convergence.
+
+**RESULT**: It does work. Although it does not seem to particularly improve the convergence.
+
+### Description
+
+The proposed loss function is:
+
+$$
+loss = p_i \ln{\frac{\sum_{1}^{j=N}\gamma^j p_{i,j}}{N}}
+$$
+
+Where $p_i$ is the usual real class probability, $\gamma^j$ is a number smaller than 1, $N$ is the total number of iterations and $p_{i,j}$ is the probability given by the network for the $i^{th}$ class and the $j^{th}$ iteration.
+
+## addFastAndStableConvergence - NO BUENO
+
+**GOAL**: we implement fast and stable convergence.
+
+**RESULT**: It does not work. Although Fast convergence might be working, it does not seem to particularly improve the convergence. Al the same time stable convergence seems to slow down the convergence instead 
+
+## Stable Convergence description
+
+The proposed loss function is:
+
+$$
+loss = p_i \ln{\frac{\sum_{1}^{j=N}\gamma^{j - N} p_{i,j}}{N}}
+$$
+
+Where $p_i$ is the usual real class probability, $\gamma^j$ is a number smaller than 1, $N$ is the total number of iterations and $p_{i,j}$ is the probability given by the network for the $i^{th}$ class and the $j^{th}$ iteration.
+
+### Discussion
+It is worth noting that Stable convergence, seems to naturally go down in a network where it is not set as a loss. Thus we assume that, either the network is optimal when doing something funny, like waiting till the end to provide a result, or there is something wrong with this loss function.
+
+### Conclusion
+It would be interesting to better explore this interaction!
